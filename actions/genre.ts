@@ -4,30 +4,36 @@ import { connectDB } from "@/lib/db";
 import Genre from "@/models/Genre";
 import { revalidatePath } from "next/cache";
 
-// Action to create a new genre
+// Add a new Genre
 export async function createGenre(name: string) {
     try {
         await connectDB();
 
-        const existing = await Genre.findOne({ name: { $regex: new RegExp(`^${name}$`, "i") } });
-        if (existing) return { success: false, error: "This genre already exists." };
+        // Check if it already exists (case insensitive)
+        const existing = await Genre.findOne({
+            name: { $regex: new RegExp(`^${name}$`, "i") }
+        });
+
+        if (existing) return { success: false, error: "Genre already exists" };
 
         await Genre.create({ name });
-
-        revalidatePath("/genres"); // Refresh the admin genre list
+        revalidatePath("/genres");
         return { success: true };
     } catch (error) {
-        return { success: false, error: "Failed to create genre." };
+        return { success: false, error: "Failed to add genre" };
     }
 }
 
-// Action to fetch all genres for the "Add Book" dropdown
+// Fetch all Genres for the 'Add Book' dropdown
 export async function getAllGenres() {
     try {
         await connectDB();
         const genres = await Genre.find({}).sort({ name: 1 });
-        return { success: true, data: JSON.parse(JSON.stringify(genres)) };
+        return {
+            success: true,
+            data: JSON.parse(JSON.stringify(genres))
+        };
     } catch (error) {
-        return { success: false, error: "Failed to fetch genres." };
+        return { success: false, error: "Failed to fetch genres" };
     }
 }

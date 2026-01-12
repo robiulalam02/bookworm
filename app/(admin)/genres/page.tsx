@@ -3,23 +3,45 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, Tag, Loader2 } from "lucide-react";
+// Import the real actions
+import { createGenre, getAllGenres } from "@/actions/genre";
 
 export default function GenresPage() {
     const [genres, setGenres] = useState<{ _id: string; name: string }[]>([]);
     const [newGenre, setNewGenre] = useState("");
     const [loading, setLoading] = useState(false);
+    const [fetching, setFetching] = useState(true);
 
-    // Note: We will connect this to a Server Action in the next step
+    // 1. Load genres from the database on page mount
+    useEffect(() => {
+        loadGenres();
+    }, []);
+
+    async function loadGenres() {
+        setFetching(true);
+        const res = await getAllGenres();
+        if (res.success) {
+            setGenres(res.data);
+        }
+        setFetching(false);
+    }
+
     const addGenre = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newGenre) return;
+        if (!newGenre || loading) return;
+
         setLoading(true);
 
-        // Logic to call server action would go here
-        // For now, let's simulate the UI behavior
-        const tempId = Math.random().toString();
-        setGenres([...genres, { _id: tempId, name: newGenre }]);
-        setNewGenre("");
+        // 2. Call the Server Action to save to MongoDB
+        const res = await createGenre(newGenre);
+
+        if (res.success) {
+            setNewGenre("");
+            await loadGenres(); // Refresh the list from the DB
+        } else {
+            alert(res.error || "Failed to add genre");
+        }
+
         setLoading(false);
     };
 
@@ -30,7 +52,6 @@ export default function GenresPage() {
                 <p className="text-stone-500 text-sm">Organize your library collections</p>
             </header>
 
-            {/* Add Genre Form */}
             <form onSubmit={addGenre} className="flex gap-3 mb-10">
                 <div className="relative flex-1">
                     <Tag className="absolute left-3 top-3 text-stone-400" size={18} />
@@ -50,14 +71,15 @@ export default function GenresPage() {
                 </button>
             </form>
 
-            {/* Genres List */}
             <div className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden">
-                <div className="p-4 bg-stone-50 border-b border-stone-200 text-xs font-bold text-stone-500 uppercase tracking-widest">
+                <div className="p-4 bg-stone-50 border-b border-stone-200 text-xs font-bold text-stone-500 uppercase tracking-widest text-[#4a3728]">
                     Existing Genres
                 </div>
                 <ul className="divide-y divide-stone-100">
-                    <AnimatePresence>
-                        {genres.length === 0 ? (
+                    <AnimatePresence mode="popLayout">
+                        {fetching ? (
+                            <li className="p-10 text-center"><Loader2 className="animate-spin mx-auto text-stone-400" /></li>
+                        ) : genres.length === 0 ? (
                             <li className="p-10 text-center text-stone-400 text-sm italic">
                                 No genres added yet. Start by adding one above.
                             </li>

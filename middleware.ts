@@ -6,12 +6,20 @@ export default withAuth(
         const token = req.nextauth.token;
         const path = req.nextUrl.pathname;
 
+        // 1. Root Redirect Logic
         if (path === "/") {
             if (token?.role === "admin") return NextResponse.redirect(new URL("/dashboard", req.url));
             return NextResponse.redirect(new URL("/library", req.url));
         }
 
-        if (path.startsWith("/admin") && token?.role !== "admin") {
+        // 2. Admin Protection Logic
+        // We check for the actual folder names you are using for Admin tasks
+        const isAdminPage = path.startsWith("/dashboard") ||
+            path.startsWith("/manage-books") ||
+            path.startsWith("/genres") ||
+            path.startsWith("/users");
+
+        if (isAdminPage && token?.role !== "admin") {
             return NextResponse.redirect(new URL("/library", req.url));
         }
     },
@@ -22,13 +30,14 @@ export default withAuth(
     }
 );
 
-// We are changing the matcher to be MUCH simpler to avoid the Regex error
 export const config = {
     matcher: [
+        "/",
         "/dashboard/:path*",
         "/library/:path*",
         "/manage-books/:path*",
+        "/genres/:path*",
+        "/users/:path*",
         "/browse/:path*",
-        "/",
     ],
 };
